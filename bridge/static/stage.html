@@ -4,23 +4,23 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <title>Leo — Presence Prototype</title>
-  <link rel="stylesheet" href="/static/stage.css">
+  <title>Leo</title>
+  <link rel="stylesheet" href="/static/stage.css?v=root1">
 </head>
 <body>
   <main class="scene">
     <canvas id="sky" aria-label="Leo, a small sun in a night sky"></canvas>
-    <header><a class="mark" href="/classic" aria-label="Open classic interface">L</a>
-      <div><strong>LEO</strong><span>here with you</span></div>
+    <header>
+      <h1 class="wordmark">Leo</h1><span class="tag">a companion, running on this device</span>
       <span id="memory-count" aria-live="polite"></span>
       <button id="conversation-toggle">Conversation</button>
-      <button id="systems-toggle" aria-expanded="false">Systems</button></header>
+      <button id="systems-toggle" aria-expanded="false">Systems</button>
+    </header>
     <section class="presence" aria-live="polite">
       <p id="state-label">CONNECTED · IDLE</p>
-      <h1>I'm here.</h1>
       <p id="caption">A quiet place to begin.</p>
       <p id="connection" role="status">Connecting locally…</p>
-      <button id="mic-toggle" class="round" aria-label="Start microphone">◖))</button>
+      <button id="mic-toggle" class="round" aria-label="Start microphone"></button>
     </section>
     <aside id="systems" class="drawer" hidden>
       <button id="close-systems" aria-label="Close systems">Close</button>
@@ -51,6 +51,6 @@
       <small id="memory-note"></small>
     </aside>
   </main>
-  <script src="/static/stage.js" defer></script>
+  <script src="/static/stage.js?v=root1" defer></script>
 </body>
 </html>

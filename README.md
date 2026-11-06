@@ -60,13 +60,11 @@ speaker and a view; it talks to its own origin and loads no external resources.
   hallucinated transcript never reaches the LLM.
 - **Per-turn latency log** in `logs/latency.csv`, plus optional raw-audio
   capture per turn for debugging the microphone path.
-- **Two interfaces** served by the bridge:
-  - `/classic` — the console with the Leo dashboard: lion face tied to the real
-    pipeline state, live conversation, Jetson vitals, per-service status, latency
-    bars and the memory list.
-  - `/stage` — a presence-first prototype: a small sun in a night sky whose
-    states follow the real pipeline, memories as stars, and a hidden "Systems"
-    drawer for diagnostics. It is a prototype; see limits.
+- **One focused interface** at `/`: Leo's live words as large type, a flat 3D
+  sun whose rays follow the real pipeline state and your voice, memories as dots
+  around it, and two drawers: **Conversation** (stored history) and **Systems**
+  (Jetson vitals, service health, models, measured latency). No external
+  resources; it runs fully offline.
 
 ## Requirements
 
@@ -159,8 +157,8 @@ The tests write to `data/`; back it up first.
 - **No true echo cancellation.** The mic is gated while Leo speaks; use
   headphones for reliable barge-in.
 - **Flat-file memory.** About 40 facts and 20 turns, no embeddings or summaries.
-- **The `/stage` UI is a prototype** and its animation costs CPU on a board that
-  already runs hot. Use `/classic` if the board is struggling.
+- **The animation costs CPU** on a board that already runs hot. It lowers its
+  frame rate when idle, and the Systems drawer has a calm mode.
 - **One conversation at a time.** No wake word, no vision.
 
 ## Repository layout

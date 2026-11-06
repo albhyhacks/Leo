@@ -64,7 +64,6 @@ ip=$(hostname -I | awk '{print $1}')
 echo
 echo "Leo is up."
 echo "  Voice: https://${ip}:8080             (talk to Leo)"
-echo "  Dash:  https://${ip}:8080/dashboard   (status, memory, latency)"
 echo "         (self-signed certificate — accept the warning; the browser"
 echo "          needs HTTPS before it will allow the microphone)"
 echo "  Logs:  docker logs -f tau-bridge-1"

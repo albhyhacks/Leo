@@ -39,18 +39,13 @@ app = FastAPI(title="OpenAI Realtime API Bridge", version="0.1.0")
 
 @app.get("/")
 async def index():
-    # no-store while the Leo UI is being iterated on; the page is small anyway
-    return FileResponse(STATIC_DIR / "index.html", headers={"Cache-Control": "no-store"})
-
-
-@app.get("/classic")
-async def classic_index():
-    return FileResponse(STATIC_DIR / "index.html", headers={"Cache-Control": "no-store"})
+    return FileResponse(STATIC_DIR / "stage.html", headers={"Cache-Control": "no-store"})
 
 
 @app.get("/stage")
 async def stage_index():
-    return FileResponse(STATIC_DIR / "stage.html", headers={"Cache-Control": "no-store"})
+    """Compatibility: the stage UI is now the root page."""
+    return RedirectResponse(url="/", status_code=307)
 
 
 @app.get("/health")
@@ -60,8 +55,8 @@ async def health():
 
 @app.get("/dashboard")
 async def dashboard_page():
-    """Compatibility: the old standalone page now lives inside the Leo tab."""
-    return RedirectResponse(url="/#leo", status_code=307)
+    """Compatibility: diagnostics now live in the Systems drawer on the main page."""
+    return RedirectResponse(url="/", status_code=307)
 
 
 @app.get("/api/status")

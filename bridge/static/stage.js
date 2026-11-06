@@ -7,6 +7,14 @@
   const controls = ['level', 'energy', 'warmth', 'curiosity'];
   let width = 0, height = 0, dpr = 1, raf = 0, inputCtx = null, outputCtx = null;
   let inputStream = null, inputNode = null, micMuted = false, connected = false;
+  const RAY_DIRS = (() => { const n = 240, out = [], g = Math.PI * (3 - Math.sqrt(5));
+    for (let i = 0; i < n; i++) { const y = 1 - (i + .5) / n * 2, r = Math.sqrt(1 - y * y), t = i * g;
+      out.push({ x: Math.cos(t) * r, y, z: Math.sin(t) * r, k: (Math.sin(i * 7.31) + 1) / 2 }); } return out; })();
+  let micPending = [], micPendingLen = 0;
+  let tiltX = 0, tiltY = 0, pointerX = 0, pointerY = 0, drawTimer = 0;
+  // Frame budget per state: a calm sun needs few frames; spend them while Leo is interacting.
+  const FPS = { Asleep: 8, Offline: 8, Idle: 15, Thinking: 24, Listening: 30, Speaking: 30, Recalling: 30, "Didn't catch it": 24 };
+  addEventListener('pointermove', e => { pointerX = (e.clientX / innerWidth - .5) * 2; pointerY = (e.clientY / innerHeight - .5) * 2; }, { passive: true });
   let state = 'Idle', smoothLevel = 0, micLevel = 0, voiceRms = 0, ttsLevel = 0, lastDraw = 0, stars = [];
   let memoryLoaded = false, selectedFactId = null, pinnedMemory = false;
   let mood = null, moodPresence = null, moodTurns = [], presenceReceivedAt = 0;
@@ -48,34 +56,28 @@
     for (let i = 0; i < value.length; i++) { hash ^= value.charCodeAt(i); hash = Math.imul(hash, 16777619); }
     return hash >>> 0;
   }
+  function sunCenter() { return width < 760 ? { x: width / 2, y: height * .3 } : { x: width * .7, y: height * .5 }; }
   function layoutStars() {
-    const span = Math.min(width, height);
+    const span = Math.min(width, height), c = sunCenter(), minX = width < 760 ? 24 : width * .52;
     stars.forEach(star => {
       const angle = stableHash(star.id, 2166136261) / 4294967296 * Math.PI * 2;
-      const distance = span * (.23 + stableHash(star.id, 3339675911) / 4294967296 * .22);
-      star.x = width / 2 + Math.cos(angle) * distance;
-      star.y = height / 2 + Math.sin(angle) * distance;
+      const distance = span * (.27 + stableHash(star.id, 3339675911) / 4294967296 * .17);
+      star.x = Math.max(minX, Math.min(width - 24, c.x + Math.cos(angle) * distance));
+      star.y = Math.max(96, Math.min(height - 24, c.y + Math.sin(angle) * distance));
     });
   }
   function drawMemoryStars(now, cx, cy) {
     for (const star of stars) {
-      const age = star.bornAt ? Math.min(1, (now - star.bornAt) / 1100) : 1;
+      const age = star.bornAt ? Math.min(1, (now - star.bornAt) / 900) : 1;
       const recalled = star.recallUntil > now;
       const asleep = state === 'Asleep';
-      const pulse = recalled ? 1 + .35 * Math.sin(now / 90) : 1;
-      const radius = (2.1 + age * 1.8) * pulse;
-      const alpha = asleep ? .18 : .48 + age * .34;
+      const r = (1.8 + age * 1.2) * (recalled ? 1.8 : 1);
       if (recalled) {
-        const thread = ctx.createLinearGradient(cx, cy, star.x, star.y);
-        thread.addColorStop(0, 'rgba(185,213,255,0)');
-        thread.addColorStop(1, `rgba(185,213,255,${.7 * (star.recallUntil - now) / 1800})`);
-        ctx.strokeStyle = thread; ctx.lineWidth = 1.3;
+        ctx.strokeStyle = `rgba(240,165,58,${.75 * (star.recallUntil - now) / 1800})`; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(star.x, star.y); ctx.stroke();
       }
-      ctx.beginPath(); ctx.arc(star.x, star.y, radius * 3.3, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(164,196,255,${recalled ? .2 : alpha * .12})`; ctx.fill();
-      ctx.beginPath(); ctx.arc(star.x, star.y, radius, 0, Math.PI * 2);
-      ctx.fillStyle = recalled ? '#f1f6ff' : `rgba(190,214,255,${alpha})`; ctx.fill();
+      ctx.beginPath(); ctx.arc(star.x, star.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = recalled ? '#F0A53A' : `rgba(236,229,214,${asleep ? .2 : .35 + age * .35})`; ctx.fill();
     }
   }
   async function refreshMemory() {
@@ -171,9 +173,11 @@
     if (historyResult.status === 'fulfilled') moodTurns = historyResult.value.turns || [];
     updateMood();
   }
+  const el = { calm: document.querySelector('#calm'), energy: document.querySelector('#energy'), warmth: document.querySelector('#warmth'),
+    curiosity: document.querySelector('#curiosity'), level: document.querySelector('#level') };
   function resize() {
-    dpr = Math.min(devicePixelRatio || 1, 1.5);
     width = innerWidth; height = innerHeight;
+    dpr = Math.min(devicePixelRatio || 1, width * height > 1.2e6 ? 1 : 1.25);
     canvas.width = Math.round(width * dpr); canvas.height = Math.round(height * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     layoutStars();
@@ -181,38 +185,58 @@
   function draw(now) {
     raf = 0;
     if (document.hidden) return;
-    if (!reduced.matches && now - lastDraw < 1000 / 30) { raf = requestAnimationFrame(draw); return; }
+    const gap = 1000 / (FPS[state] || 30);
+    if (!reduced.matches && now - lastDraw < gap - 2) {
+      if (!drawTimer) drawTimer = setTimeout(() => { drawTimer = 0; if (!raf && !document.hidden) raf = requestAnimationFrame(draw); }, Math.max(1, gap - (now - lastDraw) - 3));
+      return;
+    }
     lastDraw = now;
-    const calm = document.querySelector('#calm').checked;
+    const calm = el.calm.checked;
     const measuredEnergy = connected && mood ? mood.energy : null;
     const liveVoiceEnergy = inputStream ? Math.min(1, voiceRms * 5) : null;
     const energy = measuredEnergy !== null ? (liveVoiceEnergy !== null ? measuredEnergy * .8 + liveVoiceEnergy * .2 : measuredEnergy) :
-      liveVoiceEnergy !== null ? liveVoiceEnergy : connected ? 0 : +document.querySelector('#energy').value;
-    const warmth = connected ? (mood && mood.warmth !== null ? mood.warmth : 0) : +document.querySelector('#warmth').value;
-    const curiosity = connected ? (mood && mood.curiosity !== null ? mood.curiosity : 0) : +document.querySelector('#curiosity').value;
-    const level = connected ? (state === 'Speaking' ? ttsLevel : micLevel) : +document.querySelector('#level').value;
+      liveVoiceEnergy !== null ? liveVoiceEnergy : connected ? 0 : +el.energy.value;
+    const warmth = connected ? (mood && mood.warmth !== null ? mood.warmth : 0) : +el.warmth.value;
+    const curiosity = connected ? (mood && mood.curiosity !== null ? mood.curiosity : 0) : +el.curiosity.value;
+    const level = connected ? (state === 'Speaking' ? ttsLevel : micLevel) : +el.level.value;
     smoothLevel += (level - smoothLevel) * .12;
     ctx.clearRect(0, 0, width, height);
     const asleep = state === 'Asleep', offline = state === 'Offline';
-    const cx = width / 2, cy = height / 2, time = now / 1000;
+    const sc = sunCenter(), cx = sc.x, cy = sc.y, time = now / 1000;
     const pulse = 1 + Math.sin(time * (asleep ? .45 : .9 + energy) * Math.PI) * .025;
-    const radius = Math.min(width, height) * .105 * pulse * (1 + smoothLevel * .06);
-    const rays = calm ? 60 : 240;
+    const radius = Math.min(width, height) * (width < 760 ? .12 : .15) * pulse * (1 + smoothLevel * .06);
+    // ---- flat sun: crisp rays on a rotating sphere (still 3D), no glow ----
+    const rays = calm ? 60 : 150, stride = (RAY_DIRS.length / rays) | 0 || 1;
+    tiltX += (pointerX - tiltX) * .06; tiltY += (pointerY - tiltY) * .06;
+    const yaw = time * (state === 'Thinking' ? .5 : .14 + energy * .16) + tiltX * .6;
+    const pitch = -.22 + tiltY * .4 + Math.sin(time * .3) * .04;
+    const cyaw = Math.cos(yaw), syaw = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+    const D = 4.2, ccy = cy, dim = offline || asleep ? .4 : 1;
+    const cr = radius * .8, back = new Path2D(), front = new Path2D();
     for (let i = 0; i < rays; i++) {
-      const angle = i * Math.PI * 2 / rays;
-      const wobble = Math.sin(i * 12.9898 + time * .34) * .5 + Math.sin(i * 3.17 - time * .19) * .5;
-      const reach = (8 + 13 * warmth + wobble * 4 + smoothLevel * 24 + curiosity * 3) * (state === 'Thinking' ? .65 : 1);
-      const lean = state === 'Listening' ? smoothLevel * 9 : 0;
-      ctx.beginPath(); ctx.moveTo(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius);
-      ctx.lineTo(cx + Math.cos(angle) * (radius + reach) + lean, cy + Math.sin(angle) * (radius + reach));
-      ctx.strokeStyle = `rgba(245,${Math.round(157 + warmth * 55)},${Math.round(61 + energy * 24)},${offline || asleep ? .18 : .28 + energy * .35})`;
-      ctx.lineWidth = i % 5 === 0 ? 1.5 : 1; ctx.stroke();
+      const d = RAY_DIRS[i * stride];
+      const wobble = Math.sin(i * 12.9898 * stride + time * .34) * .5 + Math.sin(i * 3.17 * stride - time * .19) * .5;
+      const reach = (10 + 16 * warmth + wobble * 4 + smoothLevel * 30 + curiosity * 4) * (state === 'Thinking' ? .6 : 1);
+      const r0 = cr * 1.22, r1 = r0 + reach * (1 + d.k * .5);
+      const x = d.x * cyaw + d.z * syaw, z = -d.x * syaw + d.z * cyaw;
+      const y2 = d.y * cp - z * sp, z2 = d.y * sp + z * cp;
+      const s0 = D / (D - z2 * r0 / radius), s1 = D / (D - z2 * r1 / radius);
+      const lean = state === 'Listening' ? smoothLevel * 8 * z2 : 0;
+      const px0 = cx + x * r0 * s0, py0 = ccy + y2 * r0 * s0;
+      if (Math.hypot(px0 - cx, py0 - ccy) < cr * 1.06) continue; // would sit on the disc: skip, keeps a clean silhouette
+      const path = z2 < 0 ? back : front;
+      path.moveTo(px0, py0);
+      path.lineTo(cx + x * r1 * s1 + lean, ccy + y2 * r1 * s1);
     }
-    const glow = ctx.createRadialGradient(cx, cy, 2, cx, cy, radius * 1.7);
-    glow.addColorStop(0, `rgba(255,231,177,${offline ? .28 : asleep ? .42 : .9})`);
-    glow.addColorStop(.4, `rgba(255,174,77,${offline ? .12 : .32})`); glow.addColorStop(1, '#f38b1600');
-    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(cx, cy, radius * 1.7, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(cx, cy, radius * .77, 0, Math.PI * 2); ctx.fillStyle = '#ffcf83'; ctx.fill();
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = `rgba(240,165,58,${.3 * dim})`; ctx.lineWidth = 1.2; ctx.stroke(back);
+    // disc with one hard crescent shadow (flat illustration, not a glow)
+    ctx.save(); ctx.beginPath(); ctx.arc(cx, ccy, cr, 0, Math.PI * 2); ctx.clip();
+    ctx.globalAlpha = dim; ctx.fillStyle = '#B86F18'; ctx.fillRect(cx - cr, ccy - cr, cr * 2, cr * 2);
+    ctx.fillStyle = '#F0A53A'; ctx.beginPath();
+    ctx.arc(cx - cr * (.2 + tiltX * .08), ccy - cr * (.16 + tiltY * .08), cr * 1.02, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle = `rgba(240,165,58,${.95 * dim})`; ctx.lineWidth = 1.8; ctx.stroke(front);
     drawMemoryStars(now, cx, cy);
     if (!reduced.matches) raf = requestAnimationFrame(draw);
   }
@@ -302,7 +326,7 @@
     conversationPanel.hidden = false; systemsPanel.hidden = true; refreshConversation();
   };
   document.querySelector('#close-conversation').onclick = () => { conversationPanel.hidden = true; };
-  setInterval(() => { if (!document.hidden) { refreshSystems(); refreshConversation(); } }, 3000);
+  setInterval(() => { if (!document.hidden) { refreshSystems(); refreshConversation(); } }, 4000);
   document.querySelector('#close-memory').onclick = hideMemoryInfo;
   canvas.addEventListener('pointermove', event => {
     const rect = canvas.getBoundingClientRect();
@@ -400,11 +424,17 @@
       await inputCtx.audioWorklet.addModule(blobUrl); URL.revokeObjectURL(blobUrl);
       inputNode = new AudioWorkletNode(inputCtx,'leo-pcm'); analyser.connect(inputNode); inputNode.connect(inputCtx.destination);
       inputNode.port.onmessage = message => {
-        if (micMuted || !connected) return;
-        const chunk = message.data, floats = resampler.process(chunk); let power = 0;
+        if (micMuted || !connected) { micPending = []; micPendingLen = 0; return; }
+        const chunk = message.data; let power = 0;
         for (const value of chunk) power += value * value;
         voiceRms = Math.sqrt(power / Math.max(1, chunk.length));
         micLevel = Math.min(1, voiceRms * 4);
+        micPending.push(chunk); micPendingLen += chunk.length;
+        if (micPendingLen < 1920) return;               // batch: about 40 ms at 48 kHz
+        const joined = new Float32Array(micPendingLen); let at = 0;
+        for (const part of micPending) { joined.set(part, at); at += part.length; }
+        micPending = []; micPendingLen = 0;
+        const floats = resampler.process(joined);
         if (!floats.length) return;
         const pcm = new Int16Array(floats.length);
         for (let i = 0; i < floats.length; i++) { const x = Math.max(-1, Math.min(1, floats[i])); pcm[i] = x < 0 ? x * 32768 : x * 32767; }
@@ -434,7 +464,7 @@
     oscillator.start(start); oscillator.stop(start + .19);
   }
   function stopMic() {
-    micMuted = true; micLevel = 0; voiceRms = 0;
+    micMuted = true; micLevel = 0; voiceRms = 0; micPending = []; micPendingLen = 0;
     if (inputNode) inputNode.disconnect(); inputNode = null;
     if (inputCtx) inputCtx.close(); inputCtx = null;
     if (inputStream) inputStream.getTracks().forEach(track => track.stop()); inputStream = null;
@@ -446,7 +476,7 @@
   setInterval(() => {
     if (connected && state === 'Idle' && Date.now() - lastActivityAt >= 600000) setState('Asleep');
   }, 1000);
-  setInterval(() => { if (!document.hidden) refreshMemory(); }, 5000);
+  setInterval(() => { if (!document.hidden) refreshMemory(); }, 15000);
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && raf) { cancelAnimationFrame(raf); raf = 0; }
     else { render(); refreshMemory(); }
