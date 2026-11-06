@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tau — Dashboard</title>
+<style>
+  :root {
+    --bg: #0a0e13;
+    --bg-soft: #0f151d;
+    --panel: #121a24;
+    --panel-2: #16202c;
+    --border: #1e2c3a;
+    --text: #e7eef6;
+    --muted: #8ea1b5;
+    --faint: #5f7286;
+    --accent: #4fd1c5;
+    --accent-2: #8b8cf0;
+    --good: #3ddc97;
+    --bad: #ff6b6b;
+    --warn: #f5c451;
+    --radius: 14px;
+    --shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 18px 40px -24px rgba(0,0,0,.9);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(900px 500px at 12% -10%, rgba(79,209,197,.10), transparent 60%),
+      radial-gradient(800px 500px at 95% 0%, rgba(139,140,240,.10), transparent 55%),
+      var(--bg);
+    color: var(--text);
+    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 22px 44px; }
+
+  /* ---------- top bar ---------- */
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 26px; }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .mark {
+    width: 46px; height: 46px; border-radius: 13px;
+    display: grid; place-items: center;
+    font-size: 26px; font-weight: 700; color: #06201d;
+    background: linear-gradient(135deg, var(--accent), #79e6db 60%, var(--accent-2));
+    box-shadow: 0 10px 26px -12px rgba(79,209,197,.9);
+  }
+  .brand h1 { margin: 0; font-size: 22px; letter-spacing: .2px; font-weight: 650; }
+  .brand p { margin: 3px 0 0; font-size: 12.5px; color: var(--muted); }
+  .top-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 12px; border-radius: 999px;
+    border: 1px solid var(--border); background: rgba(18,26,36,.72);
+    font-size: 12.5px; color: var(--muted); white-space: nowrap;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 0 3px rgba(245,196,81,.12); }
+  .pill.online { color: #c8f7e6; border-color: rgba(61,220,151,.35); background: rgba(61,220,151,.08); }
+  .pill.online .dot { background: var(--good); box-shadow: 0 0 0 3px rgba(61,220,151,.16); }
+  .pill.offline { color: #ffd4d4; border-color: rgba(255,107,107,.35); background: rgba(255,107,107,.08); }
+  .pill.offline .dot { background: var(--bad); box-shadow: 0 0 0 3px rgba(255,107,107,.16); }
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 14px; border-radius: 10px;
+    border: 1px solid rgba(79,209,197,.35);
+    background: rgba(79,209,197,.10); color: #bff4ee;
+    text-decoration: none; font-size: 13px; font-weight: 550;
+    transition: background .15s ease, transform .15s ease;
+  }
+  .btn:hover { background: rgba(79,209,197,.18); transform: translateY(-1px); }
+
+  /* ---------- metric cards ---------- */
+  .metrics { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 14px; margin-bottom: 14px; }
+  .metric {
+    position: relative; overflow: hidden;
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px 18px; box-shadow: var(--shadow);
+  }
+  .metric::after {
+    content: ""; position: absolute; inset: 0 0 auto; height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent 70%); opacity: .5;
+  }
+  .metric .label { font-size: 11.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--faint); }
+  .metric .value { margin-top: 8px; font-size: 27px; font-weight: 650; letter-spacing: -.5px; line-height: 1; }
+  .metric .value small { font-size: 13px; color: var(--muted); font-weight: 500; letter-spacing: 0; }
+  .metric .sub { margin-top: 7px; font-size: 12px; color: var(--muted); }
+  .meter { height: 5px; border-radius: 99px; background: #1b2734; margin-top: 10px; overflow: hidden; }
+  .meter > span { display: block; height: 100%; width: 0%; border-radius: inherit; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .5s ease; }
+
+  /* ---------- panels ---------- */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .card {
+    background: linear-gradient(180deg, rgba(22,32,44,.9), rgba(18,26,36,.95));
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 18px; box-shadow: var(--shadow); min-width: 0;
+  }
+  .card h2 { margin: 0 0 14px; font-size: 13.5px; letter-spacing: .02em; color: #c3d2e1; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .count { font-size: 11.5px; font-weight: 600; color: var(--muted); background: #1b2734; border: 1px solid var(--border); padding: 2px 8px; border-radius: 999px; }
+  .hint { margin: 12px 0 0; font-size: 11.5px; color: var(--faint); }
+
+  /* services */
+  .service { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid rgba(30,44,58,.7); }
+  .service:first-child { border-top: 0; padding-top: 2px; }
+  .service .dot { flex: 0 0 auto; }
+  .service .dot.ok { background: var(--good); box-shadow: 0 0 0 3px rgba(61,220,151,.14); }
+  .service .dot.bad { background: var(--bad); box-shadow: 0 0 0 3px rgba(255,107,107,.14); }
+  .service .info { min-width: 0; flex: 1; }
+  .service .name { font-size: 13.5px; font-weight: 550; }
+  .service .detail { margin-top: 2px; font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .service .lat { font-variant-numeric: tabular-nums; font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .service .err { color: #ffb3b3; font-size: 11.5px; }
+
+  /* latency */
+  .stage { margin-bottom: 13px; }
+  .stage:last-child { margin-bottom: 0; }
+  .stage .row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .stage .name { font-size: 12.5px; color: #c8d6e4; }
+  .stage .nums { font-variant-numeric: tabular-nums; font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .stage .nums b { color: var(--text); font-weight: 600; }
+  .bar { height: 6px; background: #1b2734; border-radius: 99px; margin-top: 7px; overflow: hidden; }
+  .bar > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .5s ease; }
+  details { margin-top: 14px; border-top: 1px solid rgba(30,44,58,.7); padding-top: 10px; }
+  summary { cursor: pointer; font-size: 12.5px; color: var(--muted); user-select: none; }
+  summary:hover { color: var(--text); }
+  .tablewrap { overflow-x: auto; margin-top: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 11.5px; font-variant-numeric: tabular-nums; }
+  th { text-align: right; color: var(--faint); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  td { text-align: right; padding: 6px 8px; border-bottom: 1px solid rgba(30,44,58,.5); color: var(--muted); white-space: nowrap; }
+  td.ok { color: var(--good); } td.cancel { color: var(--warn); }
+
+  /* memory */
+  ul.facts { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  ul.facts li {
+    display: flex; gap: 9px; align-items: flex-start;
+    font-size: 13px; line-height: 1.45; color: #d4e0ec;
+    background: rgba(27,39,52,.55); border: 1px solid rgba(30,44,58,.8);
+    border-radius: 10px; padding: 9px 11px;
+  }
+  ul.facts li::before { content: "◆"; color: var(--accent); font-size: 9px; line-height: 1.9; flex: 0 0 auto; }
+  .empty { color: var(--faint); font-size: 12.5px; padding: 10px 2px; }
+
+  /* conversation */
+  .convo { display: flex; flex-direction: column; gap: 10px; max-height: 420px; overflow-y: auto; padding-right: 4px; }
+  .msg { border-radius: 11px; padding: 10px 12px; border: 1px solid rgba(30,44,58,.85); background: rgba(27,39,52,.5); }
+  .msg.user { border-color: rgba(79,209,197,.24); background: rgba(79,209,197,.06); }
+  .msg .meta { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .role { font-size: 10.5px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+  .msg.assistant .role { color: var(--accent-2); }
+  .msg .time { font-size: 10.5px; color: var(--faint); }
+  .msg .text { font-size: 13px; line-height: 1.5; color: #d9e4ef; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .msg.assistant .text { color: #e9eafd; }
+
+  footer { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; font-size: 11.5px; color: var(--faint); }
+  footer code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); }
+
+  @media (max-width: 900px) {
+    .metrics { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 520px) {
+    .wrap { padding: 18px 14px 32px; }
+    .topbar { align-items: flex-start; flex-direction: column; }
+    .top-actions { justify-content: flex-start; }
+    .metrics { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .metric .value { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">τ</div>
+      <div>
+        <h1>Tau</h1>
+        <p>local voice companion · Jetson Orin Nano</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <span id="conn" class="pill"><span class="dot"></span><span id="connText">Connecting…</span></span>
+      <a class="btn" href="/">Voice console <span aria-hidden="true">↗</span></a>
+    </div>
+  </header>
+
+  <section class="metrics" aria-label="Overview">
+    <div class="metric">
+      <div class="label">Bridge uptime</div>
+      <div class="value" id="uptime">—</div>
+      <div class="sub" id="hostUptime">host —</div>
+    </div>
+    <div class="metric">
+      <div class="label">RAM in use</div>
+      <div class="value" id="ramPct">—</div>
+      <div class="meter"><span id="ramBar"></span></div>
+      <div class="sub" id="ramDetail">—</div>
+    </div>
+    <div class="metric">
+      <div class="label">Turns measured</div>
+      <div class="value" id="turns">—</div>
+      <div class="sub" id="turnsDetail">—</div>
+    </div>
+    <div class="metric">
+      <div class="label">Facts remembered</div>
+      <div class="value" id="factsCount">—</div>
+      <div class="sub">plain text in <code>data/facts.md</code></div>
+    </div>
+  </section>
+
+  <div class="grid">
+    <section class="card" aria-labelledby="servicesTitle">
+      <h2 id="servicesTitle">Services</h2>
+      <div id="services"><div class="empty">Checking services…</div></div>
+    </section>
+
+    <section class="card" aria-labelledby="memoryTitle">
+      <h2 id="memoryTitle">Memory <span class="count" id="factCount">0</span></h2>
+      <ul class="facts" id="facts"><li class="empty">Loading…</li></ul>
+      <p class="hint">Extracted in the background after each reply, never delaying speech.</p>
+    </section>
+
+    <section class="card" aria-labelledby="latencyTitle">
+      <h2 id="latencyTitle">Latency <span class="count" id="turnCount">0 turns</span></h2>
+      <div id="stages"><div class="empty">No measured turns yet.</div></div>
+      <details>
+        <summary>Recent turns</summary>
+        <div class="tablewrap">
+          <table>
+            <thead>
+              <tr><th>Time</th><th>STT</th><th>LLM</th><th>TTS</th><th>Total</th><th>Status</th></tr>
+            </thead>
+            <tbody id="recent"><tr><td colspan="6" class="empty">No rows</td></tr></tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+
+    <section class="card" aria-labelledby="convoTitle">
+      <h2 id="convoTitle">Conversation <span class="count" id="convoCount">last 8</span></h2>
+      <div class="convo" id="history"><div class="empty">Loading…</div></div>
+    </section>
+  </div>
+
+  <footer>
+    <span id="stamp">Waiting for first refresh…</span>
+    <span>latency log <code id="latencyPath">logs/latency.csv</code></span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+
+  function el(tag, cls, text) {
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined && text !== null) node.textContent = String(text);
+    return node;
+  }
+
+  function fmtDuration(seconds) {
+    seconds = Math.max(0, Math.round(seconds || 0));
+    const d = Math.floor(seconds / 86400);
+    const h = Math.floor((seconds % 86400) / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    if (d) return d + "d " + h + "h";
+    if (h) return h + "h " + m + "m";
+    if (m) return m + "m " + s + "s";
+    return s + "s";
+  }
+
+  function fmtClock(iso) {
+    if (!iso) return "—";
+    const date = new Date(iso);
+    if (isNaN(date.getTime())) return iso;
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  }
+
+  function setConn(ok, message) {
+    const pill = $("conn");
+    pill.classList.toggle("online", !!ok);
+    pill.classList.toggle("offline", !ok);
+    $("connText").textContent = ok ? "Live" : (message ? "Offline — " + message : "Offline");
+  }
+
+  function renderServices(services) {
+    const box = $("services");
+    box.replaceChildren();
+    services.forEach((svc) => {
+      const row = el("div", "service");
+      row.appendChild(el("span", "dot " + (svc.ok ? "ok" : "bad")));
+      const info = el("div", "info");
+      info.appendChild(el("div", "name", svc.name));
+      info.appendChild(el("div", "detail" + (svc.error ? " err" : ""), svc.error ? svc.error : svc.detail));
+      row.appendChild(info);
+      row.appendChild(el("div", "lat", svc.ok ? svc.latency_ms + " ms" : "down"));
+      box.appendChild(row);
+    });
+  }
+
+  function renderStages(latency) {
+    const box = $("stages");
+    box.replaceChildren();
+    const stages = Object.keys(latency.stages || {}).map((k) => latency.stages[k]);
+    const measured = stages.filter((s) => s.median_ms !== null);
+    if (!measured.length) {
+      box.appendChild(el("div", "empty", "No measured turns yet. Say something in the voice console first."));
+      return;
+    }
+    const scale = Math.max.apply(null, measured.map((s) => s.median_ms).concat([1]));
+    measured.forEach((stage) => {
+      const wrap = el("div", "stage");
+      const row = el("div", "row");
+      row.appendChild(el("div", "name", stage.label));
+      const nums = el("div", "nums");
+      nums.appendChild(el("b", null, stage.median_ms + " ms"));
+      nums.appendChild(document.createTextNode(" median · max " + stage.max_ms + " ms"));
+      row.appendChild(nums);
+      wrap.appendChild(row);
+      const bar = el("div", "bar");
+      const fill = el("span");
+      fill.style.width = Math.max(3, Math.round((stage.median_ms / scale) * 100)) + "%";
+      bar.appendChild(fill);
+      wrap.appendChild(bar);
+      box.appendChild(wrap);
+    });
+  }
+
+  function renderRecent(rows) {
+    const body = $("recent");
+    body.replaceChildren();
+    if (!rows || !rows.length) {
+      const tr = el("tr");
+      const td = el("td", "empty", "No rows");
+      td.colSpan = 6;
+      tr.appendChild(td);
+      body.appendChild(tr);
+      return;
+    }
+    rows.forEach((row) => {
+      const tr = el("tr");
+      tr.appendChild(el("td", null, fmtClock(row.ts)));
+      tr.appendChild(el("td", null, row.stt_ms === null ? "—" : row.stt_ms));
+      tr.appendChild(el("td", null, row.llm_ms === null ? "—" : row.llm_ms));
+      tr.appendChild(el("td", null, row.tts_ms === null ? "—" : row.tts_ms));
+      tr.appendChild(el("td", null, row.total_ms === null ? "—" : row.total_ms));
+      tr.appendChild(el("td", row.status === "completed" ? "ok" : "cancel", row.status || "—"));
+      body.appendChild(tr);
+    });
+  }
+
+  function renderFacts(memory) {
+    const list = $("facts");
+    list.replaceChildren();
+    $("factCount").textContent = memory.count;
+    $("factsCount").textContent = memory.count;
+    if (!memory.facts.length) {
+      list.appendChild(el("li", "empty", "Nothing remembered yet."));
+      return;
+    }
+    memory.facts.forEach((fact) => list.appendChild(el("li", null, fact)));
+  }
+
+  function renderHistory(turns) {
+    const box = $("history");
+    box.replaceChildren();
+    if (!turns || !turns.length) {
+      box.appendChild(el("div", "empty", "No conversation yet."));
+      return;
+    }
+    $("convoCount").textContent = "last " + turns.length;
+    turns.forEach((turn) => {
+      const msg = el("div", "msg " + (turn.role === "user" ? "user" : "assistant"));
+      const meta = el("div", "meta");
+      meta.appendChild(el("span", "role", turn.role === "user" ? "You" : "Tau"));
+      meta.appendChild(el("span", "time", fmtClock(turn.ts)));
+      msg.appendChild(meta);
+      msg.appendChild(el("div", "text", turn.text));
+      box.appendChild(msg);
+    });
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function render(data) {
+    const bridge = data.bridge || {};
+    const system = data.system || {};
+    const latency = data.latency || { stages: {}, recent: [], turns: 0, completed: 0, cancelled: 0 };
+
+    $("uptime").textContent = fmtDuration(bridge.uptime_s);
+    $("hostUptime").textContent = "host up " + fmtDuration(system.host_uptime_s) + " · load " + (system.load || []).join(" / ");
+
+    const pct = Number(system.mem_used_pct || 0);
+    $("ramPct").textContent = pct.toFixed(1) + "%";
+    $("ramBar").style.width = Math.min(100, pct) + "%";
+    $("ramDetail").textContent = (system.mem_used_mb || 0) + " / " + (system.mem_total_mb || 0) + " MB · " + (system.mem_available_mb || 0) + " MB free";
+
+    $("turns").textContent = latency.turns || 0;
+    $("turnsDetail").textContent = (latency.completed || 0) + " completed · " + (latency.cancelled || 0) + " cancelled";
+    $("turnCount").textContent = (latency.turns || 0) + " turns";
+    $("latencyPath").textContent = latency.file || "logs/latency.csv";
+
+    renderServices(data.services || []);
+    renderStages(latency);
+    renderRecent(latency.recent || []);
+    renderFacts(data.memory || { count: 0, facts: [] });
+    renderHistory(data.history || []);
+
+    $("stamp").textContent = "Updated " + fmtClock(data.generated_at) + " · refreshes every 5 s";
+  }
+
+  async function refresh() {
+    try {
+      const response = await fetch("/api/status", { cache: "no-store" });
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      const data = await response.json();
+      render(data);
+      setConn(true);
+    } catch (error) {
+      setConn(false, error.message || "connection lost");
+    }
+  }
+
+  refresh();
+  setInterval(refresh, 5000);
+})();
+</script>
+</body>
+</html>

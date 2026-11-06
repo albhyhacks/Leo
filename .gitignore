@@ -1,0 +1,21 @@
+# personal data (conversation + extracted facts) — never publish
+data/
+# runtime output
+logs/
+*.pid
+# big, re-downloadable
+ollama/
+hf-cache/
+parakeet/models/
+# TLS material is generated per machine (scripts/gen-cert.sh)
+certs/*
+!certs/.gitkeep
+# scratch test artefacts
+*.wav
+llm-*.json
+stt-test.json
+# python
+.venv/
+__pycache__/
+*.pyc
+parakeet/dl.log

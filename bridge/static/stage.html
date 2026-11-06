@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Leo — Presence Prototype</title>
+  <link rel="stylesheet" href="/static/stage.css">
+</head>
+<body>
+  <main class="scene">
+    <canvas id="sky" aria-label="Leo, a small sun in a night sky"></canvas>
+    <header><a class="mark" href="/classic" aria-label="Open classic interface">L</a>
+      <div><strong>LEO</strong><span>here with you</span></div>
+      <span id="memory-count" aria-live="polite"></span>
+      <button id="conversation-toggle">Conversation</button>
+      <button id="systems-toggle" aria-expanded="false">Systems</button></header>
+    <section class="presence" aria-live="polite">
+      <p id="state-label">CONNECTED · IDLE</p>
+      <h1>I'm here.</h1>
+      <p id="caption">A quiet place to begin.</p>
+      <p id="connection" role="status">Connecting locally…</p>
+      <button id="mic-toggle" class="round" aria-label="Start microphone">◖))</button>
+    </section>
+    <aside id="systems" class="drawer" hidden>
+      <button id="close-systems" aria-label="Close systems">Close</button>
+      <h2>Systems</h2>
+      <section><h3>Vitals</h3><div id="system-vitals" class="system-data">Loading local stats…</div></section>
+      <section><h3>Services</h3><div id="system-health" class="system-data">Waiting for drawer…</div></section>
+      <section><h3>Models</h3><div id="system-models" class="system-data"></div></section>
+      <section><h3>Latency</h3><div id="system-latency" class="system-data"></div></section>
+      <details class="preview-controls"><summary>Prototype preview controls</summary>
+      <p>Controls preview unmeasured states. Live mood uses time, turn rate, voice level, and transcript words. Stars are saved memories.</p>
+      <label>State <select id="state"><option>Idle</option><option>Asleep</option><option>Listening</option><option>Thinking</option><option>Speaking</option><option>Recalling</option><option>Didn't catch it</option><option>Offline</option></select></label>
+      <label>Voice level <input id="level" type="range" min="0" max="1" step="0.01" value="0.1"></label>
+      <label>Energy <input id="energy" type="range" min="0" max="1" step="0.01" value="0.45"></label>
+      <label>Warmth <input id="warmth" type="range" min="0" max="1" step="0.01" value="0.7"></label>
+      <label>Curiosity <input id="curiosity" type="range" min="0" max="1" step="0.01" value="0.5"></label>
+      <label class="toggle"><input id="calm" type="checkbox"> Calm mode</label>
+      </details>
+    </aside>
+    <aside id="conversation" class="drawer conversation-drawer" hidden>
+      <button id="close-conversation" aria-label="Close conversation">Close</button>
+      <h2>Conversation</h2>
+      <div id="conversation-list" aria-live="polite"></div>
+    </aside>
+    <aside id="memory-info" hidden aria-live="polite">
+      <button id="close-memory" type="button" aria-label="Close memory detail">Close</button>
+      <button id="forget-memory" type="button">Forget this memory</button>
+      <p id="memory-text"></p>
+      <small id="memory-note"></small>
+    </aside>
+  </main>
+  <script src="/static/stage.js" defer></script>
+</body>
+</html>

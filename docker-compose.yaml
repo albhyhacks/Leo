@@ -1,0 +1,115 @@
+name: tau
+
+x-shared-properties: &shared-properties
+  runtime: nvidia
+  init: false
+  restart: unless-stopped
+  network_mode: host
+
+services:
+  ollama:
+    image: ${OLLAMA_TAG}
+    <<: *shared-properties
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - OLLAMA_HOST=0.0.0.0:${VLLM_PORT:-8000}
+      # 8 GB shared with the desktop + STT + TTS: one model, small context,
+      # quantized KV cache, no parallel request slots.
+      - OLLAMA_CONTEXT_LENGTH=1536
+      - OLLAMA_KV_CACHE_TYPE=q8_0
+      - OLLAMA_NUM_PARALLEL=1
+      - OLLAMA_MAX_LOADED_MODELS=1
+      # Never unload: a reload under memory pressure puts layers on the CPU (1 tok/s).
+      - OLLAMA_KEEP_ALIVE=-1
+    volumes:
+      - ./ollama:/data/models/ollama/models
+      - ./logs/ollama:/data/logs
+    # Image starts `ollama serve` in the background; keep the container alive.
+    # (The image's default /bin/bash would exit immediately without a TTY.)
+    command: ["/bin/bash", "-c", "/start_ollama && tail -f /dev/null"]
+
+  parakeet:
+    image: tau-parakeet:local
+    build: ./parakeet
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - PARAKEET_PORT=9002
+      - PARAKEET_THREADS=4
+    volumes:
+      - ./parakeet/models:/models:ro
+
+  # Whisper fallback (not started by default): docker compose --profile whisper up -d speaches
+  speaches:
+    profiles: ["whisper"]
+    image: ${SPEACHES_TAG}
+    <<: *shared-properties
+    environment:
+      - PORT=${SPEACHES_HOST_PORT:-8001}
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      # Memory tuning for 8 GB shared RAM: no Gradio UI, GPU int8 Whisper.
+      # Tiny model stays loaded (TTL 5 min) for low STT latency.
+      - ENABLE_UI=false
+      - WHISPER__INFERENCE_DEVICE=cuda
+      - WHISPER__COMPUTE_TYPE=int8_float16
+      - WHISPER__TTL=300
+      # The weights are already in ./hf-cache. Without these, every model
+      # reload makes a huggingface.co revision call while holding the model
+      # lock — with no internet that hangs STT for minutes.
+      - HF_HUB_OFFLINE=1
+      - TRANSFORMERS_OFFLINE=1
+    volumes:
+      - ./hf-cache:/data/models/huggingface
+    # The app resolves `model_aliases.json` relative to its CWD (it lives in
+    # /opt/speaches), so run there instead of copying files to /.
+    working_dir: /opt/speaches
+    # Do NOT override the command: the image entrypoint is
+    # /opt/speaches/start-server.sh and reads $PORT.
+
+  kokoro-tts:
+    image: ${KOKORO_TTS_TAG}
+    <<: *shared-properties
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      # Note: start-gpu.sh hardcodes 8880; PORT is informational only.
+      - PORT=${KOKORO_TTS_HOST_PORT:-8880}
+    # start-gpu.sh runs uvicorn with --reload; its file watcher spun one core
+    # at ~90% forever. Same server, no reloader.
+    entrypoint: ["uvicorn", "api.src.main:app", "--host", "0.0.0.0", "--port", "8880"]
+
+  bridge:
+    build: ./bridge
+    image: tau-bridge:local
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      - ollama
+      - parakeet
+      - kokoro-tts
+    environment:
+      - STT_URL=http://localhost:9002
+      - TTS_URL=http://localhost:8880
+      - OPENAI_BASE_URL=http://localhost:8000
+      - OPENAI_MODEL=${OLLAMA_MODEL}
+      - STT_MODEL=${STT_MODEL}
+      - DEFAULT_VOICE=${TTS_VOICE}
+      - TTS_SPEED=100
+      - TTS_CONCURRENCY=1
+      - DEFAULT_AEC_MODE=none
+      - DEFAULT_TURN_DETECTION=server_vad
+      - TZ=Asia/Kolkata
+      - SSL_CERTFILE=/certs/tau.crt
+      - SSL_KEYFILE=/certs/tau.key
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./bridge/static:/app/static:ro
+      - ./certs:/certs:ro
+      - ./logs:/logs
+      - ./data:/data
+      - ./prompts:/prompts
+      # nvpmodel writes the current mode here on the host; read-only for the
+      # dashboard's "NV mode" vitals row (see dashboard.py::_nvpmodel).
+      - /var/lib/nvpmodel/status:/host/nvpmodel-status:ro

@@ -1,0 +1,849 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   Leo — voice-first dashboard skin
+   Plain CSS, no external assets. Loaded after the console styles so it can
+   warm up the shell and own the #panel-leo layout.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --leo-ink: #0b0a09;
+  --leo-ink-2: #100d0a;
+  --leo-card: #17130f;
+  --leo-card-2: #1d1813;
+  --leo-line: #2e2720;
+  --leo-line-soft: rgba(245, 165, 36, 0.16);
+  --leo-cream: #f7eddd;
+  --leo-text: #e9dfd1;
+  --leo-muted: #b4a390;
+  --leo-faint: #806f5d;
+  --leo-amber: #f5a524;
+  --leo-amber-soft: #ffd68a;
+  --leo-green: #5fd3a4;
+  --leo-coral: #ff8f7a;
+  --leo-red: #ff5c5c;
+  --leo-radius: 16px;
+}
+
+body {
+  background:
+    radial-gradient(900px 520px at 12% -8%, rgba(245, 165, 36, 0.09), transparent 60%),
+    radial-gradient(700px 420px at 92% 4%, rgba(255, 143, 122, 0.06), transparent 55%),
+    var(--leo-ink);
+}
+
+/* ── Brand in the status bar ─────────────────────────────────────────── */
+.status-bar .logo { gap: 0.55rem; letter-spacing: 0.01em; }
+.status-bar .logo-icon {
+  background: linear-gradient(135deg, #ffd68a, var(--leo-amber) 58%, #c97612);
+  color: #1d1206;
+  box-shadow: 0 4px 14px -6px rgba(245, 165, 36, 0.8);
+}
+.logo-sub {
+  color: var(--leo-faint);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-left: 0.15rem;
+}
+
+/* ── Tabs ────────────────────────────────────────────────────────────── */
+.tabs-nav { overflow-x: auto; scrollbar-width: none; }
+.tabs-nav::-webkit-scrollbar { display: none; }
+.tab-btn { flex: 1 0 auto; min-width: 78px; white-space: nowrap; }
+.tab-btn.active[data-tab="leo"] {
+  color: var(--leo-amber);
+  border-bottom-color: var(--leo-amber);
+}
+
+/* ── Panel shell ─────────────────────────────────────────────────────── */
+.leo-panel {
+  background:
+    radial-gradient(760px 420px at 50% -20%, rgba(245, 165, 36, 0.07), transparent 65%),
+    linear-gradient(180deg, #0d0b09, #0b0a09 45%);
+  color: var(--leo-text);
+}
+.leo-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1.1rem 1.25rem 2rem;
+}
+.leo-scroll > * { max-width: 1180px; margin-left: auto; margin-right: auto; }
+
+/* ── Hero ────────────────────────────────────────────────────────────── */
+.leo-hero {
+  --leo-state: var(--leo-amber);
+  display: flex;
+  align-items: center;
+  gap: 1.6rem;
+  padding: 1.35rem 1.6rem;
+  border: 1px solid var(--leo-line);
+  border-radius: 20px;
+  background:
+    radial-gradient(420px 260px at 12% 30%, rgba(245, 165, 36, 0.13), transparent 65%),
+    linear-gradient(135deg, #1c1610, #120f0b 62%, #17120d);
+  box-shadow: 0 24px 50px -32px rgba(0, 0, 0, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  position: relative;
+  overflow: hidden;
+}
+.leo-hero[data-state="idle"] { --leo-state: var(--leo-amber); }
+.leo-hero[data-state="listening"] { --leo-state: var(--leo-green); }
+.leo-hero[data-state="thinking"] { --leo-state: #ffcf6b; }
+.leo-hero[data-state="speaking"] { --leo-state: var(--leo-coral); }
+.leo-hero[data-state="offline"] { --leo-state: #8a7a68; }
+.leo-hero[data-state="error"] { --leo-state: var(--leo-red); }
+
+.leo-face-wrap {
+  position: relative;
+  flex: 0 0 190px;
+  width: 190px;
+  height: 190px;
+  display: grid;
+  place-items: center;
+}
+.leo-face {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 10px 28px rgba(245, 165, 36, 0.12));
+}
+.leo-face-glow {
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--leo-state), transparent 66%);
+  opacity: 0.18;
+  filter: blur(16px);
+  transition: background 0.4s ease, opacity 0.4s ease;
+}
+.leo-hero[data-state="listening"] .leo-face-glow,
+.leo-hero[data-state="speaking"] .leo-face-glow { opacity: 0.34; }
+
+/* The gradient lives in the inline SVG; an external stylesheet cannot resolve
+   a fragment-only url(#id) against the document. */
+.leo-mane-outer {
+  fill: none;
+  stroke-width: 2.6;
+  stroke-dasharray: 9 7;
+  stroke-linecap: round;
+  opacity: 0.7;
+  transform-origin: 120px 120px;
+}
+.leo-mane-inner {
+  fill: none;
+  stroke: var(--leo-state);
+  stroke-width: 1;
+  opacity: 0.22;
+  transition: stroke 0.4s ease;
+}
+.leo-hero[data-state="listening"] .leo-mane-outer {
+  animation: leoMane 9s linear infinite;
+  opacity: 0.95;
+}
+.leo-ear {
+  fill: #1a1510;
+  stroke: var(--leo-state);
+  stroke-width: 2;
+  transition: stroke 0.4s ease;
+}
+.leo-head-shape {
+  stroke: var(--leo-state);
+  stroke-width: 2;
+  transition: stroke 0.4s ease;
+}
+.leo-eye {
+  fill: var(--leo-amber-soft);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: leoBlink 6.4s infinite;
+}
+.leo-pupil {
+  fill: #1a1208;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: leoBlink 6.4s infinite;
+}
+.leo-brows path {
+  fill: none;
+  stroke: #c97612;
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0.75;
+  transition: transform 0.3s ease;
+}
+.leo-muzzle-shape {
+  fill: #201812;
+  stroke: #b8690f;
+  stroke-width: 1.6;
+}
+.leo-nose { fill: var(--leo-state); transition: fill 0.4s ease; }
+.leo-mouth, .leo-whisker {
+  fill: none;
+  stroke: #c97612;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.leo-mouth { transform-box: fill-box; transform-origin: center; }
+.leo-hero[data-state="thinking"] .leo-eyes { transform: translateY(-2px); }
+.leo-hero[data-state="thinking"] .leo-eyes ellipse { animation-duration: 3.2s; }
+.leo-hero[data-state="speaking"] .leo-mouth { animation: leoTalk 0.46s ease-in-out infinite alternate; }
+.leo-hero[data-state="offline"] .leo-eye,
+.leo-hero[data-state="offline"] .leo-pupil,
+.leo-hero[data-state="error"] .leo-eye,
+.leo-hero[data-state="error"] .leo-pupil {
+  animation: none;
+  transform: scaleY(0.12);
+  opacity: 0.6;
+}
+
+@keyframes leoMane { to { transform: rotate(360deg); } }
+@keyframes leoBlink {
+  0%, 91%, 100% { transform: scaleY(1); }
+  94% { transform: scaleY(0.08); }
+}
+@keyframes leoTalk {
+  from { transform: scaleY(0.72); }
+  to { transform: scaleY(1.35); }
+}
+
+.leo-hero-copy { min-width: 0; flex: 1; }
+.leo-kicker {
+  margin: 0 0 0.35rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--leo-faint);
+  font-weight: 600;
+}
+.leo-kicker span { color: var(--leo-amber); }
+.leo-hero h1 {
+  margin: 0;
+  font-size: clamp(1.65rem, 3.6vw, 2.5rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: var(--leo-cream);
+  font-weight: 650;
+}
+.leo-hero h1::after {
+  content: "";
+  display: inline-block;
+  width: 0.42em;
+  height: 0.42em;
+  margin-left: 0.45rem;
+  border-radius: 50%;
+  background: var(--leo-state);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--leo-state) 45%, transparent);
+  animation: leoPulse 2.2s infinite;
+  vertical-align: 0.12em;
+  transition: background 0.4s ease;
+}
+.leo-hero[data-state="offline"] h1::after,
+.leo-hero[data-state="error"] h1::after { animation: none; box-shadow: none; }
+@keyframes leoPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 165, 36, 0); }
+  50% { box-shadow: 0 0 0 7px rgba(245, 165, 36, 0); }
+}
+.leo-hero-copy > p#leoStateLine {
+  margin: 0.45rem 0 0;
+  font-size: 0.92rem;
+  color: var(--leo-muted);
+  max-width: 46ch;
+  line-height: 1.5;
+}
+.leo-hero-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin-top: 1.15rem;
+}
+.leo-mic {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.72rem 1.15rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ffd68a, var(--leo-amber) 60%, #e08c12);
+  color: #211305;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  box-shadow: 0 10px 24px -14px rgba(245, 165, 36, 0.95);
+  transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.2s ease;
+}
+.leo-mic:hover { transform: translateY(-1px); filter: brightness(1.04); }
+.leo-mic:active { transform: translateY(0); }
+.leo-mic.mic-on {
+  background: linear-gradient(135deg, #9cf0ca, var(--leo-green) 62%, #2ba97a);
+  color: #052018;
+  box-shadow: 0 10px 26px -12px rgba(95, 211, 164, 0.9);
+}
+.leo-mic svg { flex: 0 0 auto; }
+.leo-kbd {
+  font-size: 0.76rem;
+  color: var(--leo-faint);
+}
+.leo-kbd kbd {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  padding: 0.12rem 0.38rem;
+  border: 1px solid var(--leo-line);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: #1a1510;
+  color: var(--leo-muted);
+}
+.leo-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  padding: 0.36rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--leo-line);
+  background: rgba(23, 19, 15, 0.8);
+  color: var(--leo-muted);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.leo-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--leo-faint);
+  box-shadow: 0 0 0 3px rgba(128, 111, 93, 0.14);
+}
+.leo-pill.online { color: #c8f7e6; border-color: rgba(95, 211, 164, 0.35); }
+.leo-pill.online .leo-dot { background: var(--leo-green); box-shadow: 0 0 0 3px rgba(95, 211, 164, 0.16); }
+.leo-pill.connecting { color: var(--leo-amber-soft); border-color: var(--leo-line-soft); }
+.leo-pill.connecting .leo-dot { background: var(--leo-amber); animation: leoBlinkDot 1s infinite; }
+.leo-pill.offline, .leo-pill.error { color: #ffc9c9; border-color: rgba(255, 92, 92, 0.32); }
+.leo-pill.offline .leo-dot, .leo-pill.error .leo-dot { background: var(--leo-red); box-shadow: 0 0 0 3px rgba(255, 92, 92, 0.16); }
+@keyframes leoBlinkDot { 50% { opacity: 0.35; } }
+
+/* ── Intro ───────────────────────────────────────────────────────────── */
+.leo-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.85rem;
+  padding: 0.8rem 1rem;
+  border: 1px dashed var(--leo-line-soft);
+  border-radius: 12px;
+  background: rgba(245, 165, 36, 0.05);
+  color: var(--leo-muted);
+  font-size: 0.84rem;
+}
+.leo-intro[hidden] { display: none; }
+.leo-intro p { margin: 0; }
+.leo-intro strong { color: var(--leo-cream); }
+.leo-intro button {
+  flex: 0 0 auto;
+  padding: 0.42rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid var(--leo-line-soft);
+  background: rgba(245, 165, 36, 0.1);
+  color: var(--leo-amber-soft);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+/* ── Cards / grid ────────────────────────────────────────────────────── */
+.leo-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  gap: 0.9rem;
+  margin-top: 0.9rem;
+}
+.leo-card {
+  min-width: 0;
+  border: 1px solid var(--leo-line);
+  border-radius: var(--leo-radius);
+  background: linear-gradient(180deg, var(--leo-card-2), var(--leo-card));
+  box-shadow: 0 18px 40px -30px rgba(0, 0, 0, 0.9);
+  padding: 1rem 1.05rem;
+  display: flex;
+  flex-direction: column;
+}
+.leo-convo-card { grid-row: span 2; min-height: 340px; }
+.leo-latency-card, .leo-memory-card { grid-column: 1 / -1; }
+.leo-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.8rem;
+}
+.leo-card-head h2 {
+  margin: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--leo-muted);
+  font-weight: 650;
+}
+.leo-badge {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--leo-faint);
+  border: 1px solid var(--leo-line);
+  border-radius: 999px;
+  padding: 0.16rem 0.5rem;
+  white-space: nowrap;
+}
+.leo-empty {
+  color: var(--leo-faint);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  margin: 0.2rem 0;
+}
+
+/* ── Transcript ──────────────────────────────────────────────────────── */
+.leo-transcript {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding-right: 0.25rem;
+  scrollbar-width: thin;
+  scrollbar-color: #3a3027 transparent;
+}
+.leo-msg {
+  max-width: 90%;
+  padding: 0.62rem 0.78rem;
+  border-radius: 13px;
+  border: 1px solid var(--leo-line);
+  background: rgba(29, 24, 19, 0.7);
+}
+.leo-msg.user {
+  align-self: flex-end;
+  max-width: 84%;
+  border-color: rgba(95, 211, 164, 0.28);
+  background: rgba(95, 211, 164, 0.075);
+  border-bottom-right-radius: 4px;
+}
+.leo-msg.assistant {
+  align-self: flex-start;
+  border-color: rgba(245, 165, 36, 0.24);
+  background: rgba(245, 165, 36, 0.055);
+  border-bottom-left-radius: 4px;
+}
+.leo-msg .leo-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.22rem;
+}
+.leo-msg .leo-role {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--leo-green);
+}
+.leo-msg.assistant .leo-role { color: var(--leo-amber); }
+.leo-msg .leo-time {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--leo-faint);
+}
+.leo-msg .leo-text {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--leo-text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.leo-action {
+  display: inline;
+  color: var(--leo-amber-soft);
+  font-style: italic;
+  opacity: 0.88;
+}
+
+/* ── Vitals ──────────────────────────────────────────────────────────── */
+.leo-vitals-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7rem 0.9rem;
+}
+.leo-vital {
+  min-width: 0;
+  padding: 0.52rem 0.6rem;
+  border: 1px solid rgba(46, 39, 32, 0.7);
+  border-radius: 10px;
+  background: rgba(13, 11, 9, 0.35);
+}
+.leo-vital-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+.leo-vital-head span {
+  font-size: 0.68rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--leo-faint);
+}
+.leo-vital-head strong {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--leo-cream);
+  font-variant-numeric: tabular-nums;
+}
+.leo-vital-sub {
+  margin-top: 0.16rem;
+  font-size: 0.66rem;
+  color: var(--leo-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.leo-meter {
+  height: 5px;
+  margin-top: 0.42rem;
+  border-radius: 99px;
+  background: #241e18;
+  overflow: hidden;
+}
+.leo-meter > span {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--leo-amber), #ffd68a);
+  transition: width 0.5s ease, background 0.3s ease;
+}
+.leo-meter > span.warn { background: linear-gradient(90deg, #f5a524, #ffcf6b); }
+.leo-meter > span.hot { background: linear-gradient(90deg, #ff7a5c, var(--leo-red)); }
+
+.leo-sparks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7rem;
+  margin-top: 0.8rem;
+}
+.leo-spark {
+  border: 1px solid rgba(46, 39, 32, 0.7);
+  border-radius: 10px;
+  padding: 0.45rem 0.55rem 0.3rem;
+  background: rgba(13, 11, 9, 0.35);
+}
+.leo-spark-head {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--leo-faint);
+  margin-bottom: 0.2rem;
+}
+.leo-spark canvas { width: 100%; height: 46px; display: block; }
+
+/* ── Models ──────────────────────────────────────────────────────────── */
+.leo-models { display: flex; flex-direction: column; }
+.leo-model-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.48rem 0;
+  border-top: 1px solid rgba(46, 39, 32, 0.55);
+}
+.leo-model-row:first-child { border-top: 0; padding-top: 0.1rem; }
+.leo-model-dot {
+  width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%;
+  background: var(--leo-faint);
+  box-shadow: 0 0 0 3px rgba(128, 111, 93, 0.12);
+}
+.leo-model-dot.ok { background: var(--leo-green); box-shadow: 0 0 0 3px rgba(95, 211, 164, 0.14); }
+.leo-model-dot.warming { background: var(--leo-amber); box-shadow: 0 0 0 3px rgba(245, 165, 36, 0.14); }
+.leo-model-dot.bad { background: var(--leo-red); box-shadow: 0 0 0 3px rgba(255, 92, 92, 0.14); }
+.leo-model-info { min-width: 0; flex: 1; }
+.leo-model-top { display: flex; align-items: baseline; gap: 0.45rem; }
+.leo-model-role {
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--leo-faint);
+  flex: 0 0 auto;
+}
+.leo-model-name {
+  font-size: 0.8rem;
+  color: var(--leo-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.leo-model-detail {
+  margin-top: 0.05rem;
+  font-size: 0.66rem;
+  color: var(--leo-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Latency ─────────────────────────────────────────────────────────── */
+.leo-medians {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 0.8rem;
+}
+.leo-stat {
+  border: 1px solid rgba(46, 39, 32, 0.75);
+  border-radius: 11px;
+  background: rgba(13, 11, 9, 0.38);
+  padding: 0.55rem 0.65rem;
+}
+.leo-stat-label {
+  display: block;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--leo-faint);
+}
+.leo-stat strong {
+  display: block;
+  margin-top: 0.14rem;
+  font-family: var(--font-mono);
+  font-size: 1.18rem;
+  font-weight: 600;
+  color: var(--leo-cream);
+  font-variant-numeric: tabular-nums;
+}
+.leo-stat-note {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.62rem;
+  color: var(--leo-faint);
+}
+.leo-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  margin-bottom: 0.55rem;
+  font-size: 0.66rem;
+  color: var(--leo-faint);
+}
+.leo-legend span { display: inline-flex; align-items: center; gap: 0.32rem; }
+.leo-legend i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+.seg-stt { background: var(--leo-green); }
+.seg-llm { background: var(--leo-amber); }
+.seg-tts { background: var(--leo-coral); }
+.seg-tail { background: #4b4036; }
+
+.leo-bars { display: flex; flex-direction: column; gap: 0.34rem; }
+.leo-bar-row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 54px;
+  align-items: center;
+  gap: 0.55rem;
+}
+.leo-bar-time {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--leo-faint);
+  white-space: nowrap;
+}
+.leo-bar-track {
+  height: 11px;
+  display: flex;
+  border-radius: 99px;
+  overflow: hidden;
+  background: #211b15;
+  border: 1px solid rgba(46, 39, 32, 0.6);
+}
+.leo-bar-seg { height: 100%; min-width: 1px; }
+.leo-bar-total {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  color: var(--leo-muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.leo-details { margin-top: 0.9rem; border-top: 1px solid var(--leo-line); padding-top: 0.6rem; }
+.leo-details summary {
+  cursor: pointer;
+  font-size: 0.74rem;
+  color: var(--leo-muted);
+  user-select: none;
+}
+.leo-details summary:hover { color: var(--leo-cream); }
+.leo-tablewrap { overflow-x: auto; margin-top: 0.5rem; }
+.leo-tablewrap table { width: 100%; border-collapse: collapse; font-size: 0.68rem; font-variant-numeric: tabular-nums; }
+.leo-tablewrap th {
+  text-align: right;
+  padding: 0.36rem 0.45rem;
+  color: var(--leo-faint);
+  font-weight: 600;
+  border-bottom: 1px solid var(--leo-line);
+  white-space: nowrap;
+}
+.leo-tablewrap th:first-child, .leo-tablewrap td:first-child { text-align: left; }
+.leo-tablewrap td {
+  text-align: right;
+  padding: 0.34rem 0.45rem;
+  color: var(--leo-muted);
+  border-bottom: 1px solid rgba(46, 39, 32, 0.45);
+  white-space: nowrap;
+}
+.leo-tablewrap td.ok { color: var(--leo-green); }
+.leo-tablewrap td.cancel { color: var(--leo-amber); }
+
+/* ── Memory ──────────────────────────────────────────────────────────── */
+.leo-facts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.leo-fact {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 0.55rem 0.62rem;
+  border: 1px solid rgba(46, 39, 32, 0.8);
+  border-radius: 10px;
+  background: rgba(29, 24, 19, 0.55);
+}
+.leo-fact::before {
+  content: "◆";
+  color: var(--leo-amber);
+  font-size: 0.55rem;
+  line-height: 1.8;
+  flex: 0 0 auto;
+}
+.leo-fact-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--leo-text);
+  overflow-wrap: anywhere;
+}
+.leo-fact-del {
+  flex: 0 0 auto;
+  width: 22px; height: 22px;
+  display: grid; place-items: center;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--leo-faint);
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.leo-fact-del:hover { color: #ffc9c9; border-color: rgba(255, 92, 92, 0.3); background: rgba(255, 92, 92, 0.08); }
+.leo-memory-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.8rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--leo-line);
+}
+.leo-note { font-size: 0.68rem; color: var(--leo-faint); }
+.leo-danger {
+  flex: 0 0 auto;
+  padding: 0.38rem 0.72rem;
+  border: 1px solid rgba(255, 92, 92, 0.25);
+  border-radius: 8px;
+  background: rgba(255, 92, 92, 0.06);
+  color: #ffb3b3;
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+.leo-danger:hover { background: rgba(255, 92, 92, 0.12); }
+.leo-danger.armed {
+  border-color: rgba(255, 92, 92, 0.6);
+  background: rgba(255, 92, 92, 0.17);
+  color: #ffe0e0;
+}
+
+/* ── Footer / toast ──────────────────────────────────────────────────── */
+.leo-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+  font-size: 0.66rem;
+  color: var(--leo-faint);
+}
+.leo-footer code {
+  font-family: var(--font-mono);
+  color: var(--leo-muted);
+}
+.leo-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 1.15rem;
+  transform: translate(-50%, 14px);
+  z-index: 50;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--leo-line-soft);
+  background: rgba(29, 24, 19, 0.96);
+  color: var(--leo-amber-soft);
+  font-size: 0.78rem;
+  box-shadow: 0 14px 32px -18px rgba(0, 0, 0, 0.95);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.leo-toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* ── Responsive ──────────────────────────────────────────────────────── */
+@media (max-width: 980px) {
+  .leo-grid { grid-template-columns: 1fr; }
+  .leo-convo-card { grid-row: auto; min-height: 300px; }
+  .leo-latency-card, .leo-memory-card { grid-column: auto; }
+}
+@media (max-width: 700px) {
+  .leo-scroll { padding: 0.8rem 0.8rem 1.6rem; }
+  .leo-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    gap: 0.5rem;
+    padding: 1.1rem 1.15rem 1.2rem;
+  }
+  .leo-face-wrap { width: 138px; height: 138px; flex-basis: 138px; align-self: center; }
+  .leo-hero h1 { font-size: 1.9rem; }
+  .leo-medians { grid-template-columns: 1fr 1fr; }
+  .leo-vitals-grid { grid-template-columns: 1fr 1fr; }
+  .leo-facts { grid-template-columns: 1fr; }
+  .leo-sparks { grid-template-columns: 1fr; }
+  .logo-sub { display: none; }
+}
+@media (max-width: 520px) {
+  .tab-icon { display: none; }
+  .tab-btn { font-size: 0.78rem; padding: 0.68rem 0.55rem; }
+  .leo-vitals-grid { grid-template-columns: 1fr; }
+  .leo-medians { grid-template-columns: 1fr; }
+  .leo-hero-actions { gap: 0.55rem; }
+  .leo-kbd { display: none; }
+  .leo-memory-actions { flex-direction: column; align-items: flex-start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leo-mane-outer, .leo-eye, .leo-pupil, .leo-mouth,
+  .leo-hero h1::after, .leo-pill.connecting .leo-dot {
+    animation: none !important;
+  }
+  .leo-mic, .leo-meter > span, .leo-toast { transition: none !important; }
+}
